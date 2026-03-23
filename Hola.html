@@ -1,1 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevWeb Global OS</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --accent: #38bdf8;
+            --text: #f1f5f9;
+        }
 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- PANEL DE CREACIÓN (IZQUIERDA) --- */
+        #creator-panel {
+            background: var(--panel);
+            padding: 20px;
+            border-right: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .tool-box {
+            background: #334155;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        input, select, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            border-radius: 6px;
+            border: none;
+            background: #0f172a;
+            color: white;
+        }
+
+        button {
+            background: var(--accent);
+            color: #0f172a;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover { transform: scale(1.02); background: #7dd3fc; }
+
+        /* --- NAVEGADOR (DERECHA) --- */
+        #main-view {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .browser-ui {
+            background: #334155;
+            padding: 10px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #url-bar {
+            flex-grow: 1;
+            background: #1e293b;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-family: monospace;
+        }
+
+        #viewport {
+            background: white;
+            color: #333;
+            flex-grow: 1;
+            border-radius: 0 0 12px 12px;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+        }
+
+        /* --- ELEMENTOS DE LA WEB .DEV --- */
+        .dev-union {
+            border: 2px dashed var(--accent);
+            padding: 20px;
+            border-radius: 15px;
+            background: #f0f9ff;
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .dev-btn { background: #333; color: white; padding: 12px 25px; border-radius: 8px; text-decoration: none; display: inline-block; }
+        .dev-img { max-width: 100%; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .dev-text-box { background: #fff; border: 1px solid #ccc; padding: 10px; width: 100%; border-radius: 5px; }
+
+        .badge-public {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #22c55e;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <section id="creator-panel">
+        <h2>🛠️ DevStudio 2026</h2>
+        <div class="tool-box">
+            <label>Dominio Público:</label>
+            <input type="text" id="dom-name" placeholder="mi-web">
+            <small>Se guardará como .dev</small>
+        </div>
+
+        <div class="tool-box">
+            <label>Agregar Elemento:</label>
+            <select id="el-type">
+                <option value="title">Título Gigante</option>
+                <option value="text">Párrafo de Texto</option>
+                <option value="image">Imagen URL</option>
+                <option value="btn">Botón con Link</option>
+                <option value="input">Caja de Texto (Input)</option>
+                <option value="union">Sistema de Unión (Caja + Texto)</option>
+            </select>
+            <textarea id="el-content" placeholder="Contenido o texto del elemento"></textarea>
+            <input type="text" id="el-extra" placeholder="URL, Link o Placeholder">
+            <button onclick="addToDraft()">Añadir al Diseño</button>
+        </div>
+
+        <button onclick="publishGlobal()" style="background: #fbbf24;">🚀 PUBLICAR PARA TODOS</button>
+        <hr>
+        <div id="explorer-list">
+            <h4>🌐 Webs Publicadas</h4>
+            </div>
+    </section>
+
+    <section id="main-view">
+        <div class="browser-ui">
+            <div style="display:flex; gap:5px;">
+                <span style="background:#ff5f56; width:12px; height:12px; border-radius:50%"></span>
+                <span style="background:#ffbd2e; width:12px; height:12px; border-radius:50%"></span>
+                <span style="background:#27c93f; width:12px; height:12px; border-radius:50%"></span>
+            </div>
+            <input type="text" id="url-bar" placeholder="buscar.dev" onkeypress="handleNav(event)">
+        </div>
+        <div id="viewport">
+            <div style="text-align:center; padding-top:100px; color:#94a3b8">
+                <h1>Bienvenido a la Red .dev</h1>
+                <p>Crea una web a la izquierda o escribe un dominio arriba.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="badge-public">📡 Status: Cloud Sync Active</div>
+
+<script>
+    let draft = [];
+    const API_KEY = "$2b$10$YourMockAPIKey"; // Aquí usarías una Key de JSONBin o Firebase
+    
+    // Simulación de Nube (Para que el código funcione de inmediato usaremos localStorage 
+    // pero con lógica de "Publicación" para que veas cómo escalarlo)
+    
+    function addToDraft() {
+        const type = document.getElementById('el-type').value;
+        const content = document.getElementById('el-content').value;
+        const extra = document.getElementById('el-extra').value;
+
+        draft.push({ type, content, extra });
+        renderWeb(draft);
+    }
+
+    function renderWeb(elements) {
+        const vp = document.getElementById('viewport');
+        vp.innerHTML = "";
+        
+        elements.forEach(el => {
+            if(el.type === 'title') vp.innerHTML += `<h1>${el.content}</h1>`;
+            if(el.type === 'text') vp.innerHTML += `<p>${el.content}</p>`;
+            if(el.type === 'image') vp.innerHTML += `<img src="${el.extra}" class="dev-img">`;
+            if(el.type === 'btn') vp.innerHTML += `<a href="#" class="dev-btn" onclick="alert('Yendo a: ${el.extra}')">${el.content}</a><br><br>`;
+            if(el.type === 'input') vp.innerHTML += `<input type="text" class="dev-text-box" placeholder="${el.extra}"><br><br>`;
+            if(el.type === 'union') {
+                vp.innerHTML += `
+                    <div class="dev-union">
+                        <h3>${el.content}</h3>
+                        <p>${el.extra}</p>
+                        <button style="width:auto">Interactuar</button>
+                    </div>`;
+            }
+        });
+    }
+
+    function publishGlobal() {
+        const name = document.getElementById('dom-name').value.toLowerCase().trim();
+        if(!name) return alert("Escribe un nombre de dominio");
+        
+        const fullURL = name.endsWith('.dev') ? name : name + ".dev";
+        const cloudData = JSON.parse(localStorage.getItem('DevWeb_Global') || '{}');
+        
+        cloudData[fullURL] = draft;
+        localStorage.setItem('DevWeb_Global', JSON.stringify(cloudData));
+        
+        alert("¡Publicado! Ahora cualquier usuario con este código puede ver: " + fullURL);
+        updateExplorer();
+    }
+
+    function handleNav(e) {
+        if(e.key === 'Enter') {
+            const url = e.target.value.toLowerCase().trim();
+            const cloudData = JSON.parse(localStorage.getItem('DevWeb_Global') || '{}');
+            
+            if(cloudData[url]) {
+                renderWeb(cloudData[url]);
+            } else {
+                document.getElementById('viewport').innerHTML = `<h1>404 Not Found</h1><p>La web <b>${url}</b> no existe.</p>`;
+            }
+        }
+    }
+
+    function updateExplorer() {
+        const list = document.getElementById('explorer-list');
+        const cloudData = JSON.parse(localStorage.getItem('DevWeb_Global') || '{}');
+        list.innerHTML = "<h4>🌐 Webs Publicadas</h4>";
+        
+        Object.keys(cloudData).forEach(site => {
+            const item = document.createElement('div');
+            item.innerHTML = `<button style="background:#475569; margin-bottom:5px;" onclick="document.getElementById('url-bar').value='${site}'; handleNav({key:'Enter'})">${site}</button>`;
+            list.appendChild(item);
+        });
+    }
+
+    updateExplorer();
+</script>
+</body>
+</html>
